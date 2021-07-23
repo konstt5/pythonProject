@@ -135,7 +135,7 @@ CheckBox(text = "Check me! ;)", parent = desktop, position = (5,5))
 pygame.display.set_caption("Simple-Pygame-GUI Ver " + spg.__version__)
 
 while running:
-    tick = clock.tick()
+    tick = clock.tick(60)
     pygame.display.set_caption("%d" % clock.get_fps())
     for e in spg.setEvents():
         if e.type == pygame.QUIT:
