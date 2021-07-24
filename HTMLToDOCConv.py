@@ -1,0 +1,2 @@
+import pypandoc
+output = pypandoc.convert_file('https://www.powercoin.it/en/mennica-polska-poland-mint/4534-celtic-calendar-2-oz-silver-coin-2-niue-2020.html', format='html', to='docx', outputfile='1.docx', extra_args=['-RTS'])
