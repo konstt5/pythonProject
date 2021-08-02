@@ -1,28 +1,3 @@
-"""
-Copyright (c) 2008 Canio Massimo "Keebus" Tristano
-
-Permission is hereby granted, free of charge, to any person
-obtaining a copy of this software and associated documentation
-files (the "Software"), to deal in the Software without
-restriction, including without limitation the rights to use,
-copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the
-Software is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
-"""
-
 import pygame
 from pygame.locals import Rect
 from pygame import Surface
@@ -80,7 +55,7 @@ class Widget(object):
     
     dynamicAttributes = []
     
-    def __init__(self, parent, style = None, position = 0, size = (100,20), visible = True, enabled = True, anchor = ANCHOR_TOP | ANCHOR_LEFT):
+    def __init__(self, parent, theme=None, style = None, position = 0, size = (100,20), visible = True, enabled = True, anchor = ANCHOR_TOP | ANCHOR_LEFT):
         if parent == None:
             raise GuiCoreException("Widget must have a parent.")
         
@@ -89,6 +64,7 @@ class Widget(object):
         self.mousedown = False
         self.spacedown = False
         self.mouseclick = False
+        self.mousepos = None
         
         #Callbacks
         self.onClick = []
@@ -115,9 +91,10 @@ class Widget(object):
         self.size = size
         self.visible = visible
         self.enabled = enabled
+        self.theme = theme
         self.style = style
-        
-        self.dynamicAttributes = ['style', 'size', 'enabled']
+
+        self.dynamicAttributes = ['theme', 'style', 'size', 'enabled']
         
         self.needsRefresh = False
         
@@ -134,6 +111,7 @@ class Widget(object):
         if self.enabled:
             b1,b2,b3 = pygame.mouse.get_pressed()
             self.mouseclick = False
+            self.mousepos = pygame.mouse.get_pos()
             
             #Updates informations about mouse
             if not b1:
@@ -478,8 +456,8 @@ class Container(Widget):
     client_size = property(lambda self: (self.surf.get_width() - self.style['offset-top-left'][0] - self.style['offset-bottom-right'][0], self.surf.get_height() - self.style['offset-top-left'][1] - self.style['offset-bottom-right'][1]))
     _valid_client_rect = property(lambda self: self.client_size[0] > 0 and self.client_size[1] > 0)
     
-    def __init__(self, parent, style, position = 2, size = (100,50), visible = True, enabled = True, anchor = ANCHOR_TOP | ANCHOR_LEFT):
-        Widget.__init__(self, parent, style, position, size, visible, enabled,anchor)
+    def __init__(self, parent, theme, style, position = 2, size = (100,50), visible = True, enabled = True, anchor = ANCHOR_TOP | ANCHOR_LEFT):
+        Widget.__init__(self, parent, theme, style, position, size, visible, enabled,anchor)
         
         self.widgets = []
         self.surf = None
@@ -612,37 +590,42 @@ class Container(Widget):
     def get_client_subsurf(self,  surf = None):
            if not surf: surf = self.surf
            return surf.subsurface(Rect(self.style['offset-top-left'], (surf.get_width() - self.style['offset-top-left'][0] - self.style['offset-bottom-right'][0], surf.get_height() - self.style['offset-top-left'][1] - self.style['offset-bottom-right'][1])))
-       
+
+
 class Label(Widget):
-    
-    REFRESH_ON_MOUSE_OVER  = False
+    REFRESH_ON_MOUSE_OVER = False
     REFRESH_ON_MOUSE_DOWN = False
     REFRESH_ON_MOUSE_CLICK = False
     REFRESH_ON_MOUSE_LEAVE = False
-    
-    def __init__(self, parent, style = None, position = 0, size = (100,20), visible = True, anchor = ANCHOR_TOP | ANCHOR_LEFT, autosize = True, text = "Label"):
-        Widget.__init__(self,parent,style,position,size,visible,False, anchor)
-        
+
+    def __init__(self, parent, theme=None, style=None, position=0, size=(100, 20), visible=True, anchor=ANCHOR_TOP | ANCHOR_LEFT,
+                 autosize=True, text="Label"):
+
+        if theme:
+            style = theme["Label"]
+
+        Widget.__init__(self, parent, theme, style, position, size, visible, False, anchor)
+
         self.text = text
         self.autosize = autosize
-        
+
         if not style:
             self.style = styles.defaultLabelStyle
-        
+
         self.dynamicAttributes.append("text")
         self.refresh()
-        
+
     def refresh(self):
         self.surf = utils.renderText(self.text, self.style['font'], self.style['antialias'], self.style['font-color'],
-                   self.size, self.autosize, self.style['wordwrap'])
-        
+                                     self.size, self.autosize, self.style['wordwrap'])
+
         if self.autosize == AUTOSIZE_FULL:
             self.size = self.surf.get_size()
         elif self.autosize == AUTOSIZE_VERTICAL_ONLY:
             self.size = self.size[0], self.surf.get_height()
-            
+
     def draw(self, surf):
-        surf.blit(self.surf, self._true_position, Rect((0,0), self.size))
+        surf.blit(self.surf, self._true_position, Rect((0, 0), self.size))
         if self.style['border-width']:
             draw.rect(surf, self.style['border-color'], self.rect, self.style['border-width'])
         
@@ -650,20 +633,26 @@ class Label(Widget):
 
 class Button(Widget):
     GETS_FOCUS = True
-    def __init__(self, parent = None, style = None, position = 0, size = (100,20), visible = True, enabled = True, anchor = ANCHOR_TOP | ANCHOR_LEFT, autosize = True, text = "Button", image = None):
-        Widget.__init__(self,parent,style,position,size,visible,enabled,anchor)
-        
+
+    def __init__(self, parent=None, theme=None, style=None, position=0, size=(100, 20), visible=True, enabled=True,
+                 anchor=ANCHOR_TOP | ANCHOR_LEFT, autosize=True, text="Button", image=None):
+
+        if theme:
+            style = theme["Button"]
+
+        Widget.__init__(self, parent, theme, style, position, size, visible, enabled, anchor)
+
         self.surf = None
         self.text = text
         self.image = image
         self.autosize = autosize
-        
+
         if not style:
             self.style = styles.defaultButtonStyle
-        
+
         self.dynamicAttributes.append("text")
         self.refresh()
-    
+
     def _set_style(self, style):
         """
         This method processes the FIXED skin if given to estrapulate single parts from the whole surface.
@@ -671,33 +660,34 @@ class Button(Widget):
         Note: Skins are, differently from spg, fixed, that means it doesn't support half defined skins (only normal and pressed, i.e.)
         """
         self._style = style
-        
+
         if style and style['appearence'] == styles.GRAPHICAL:
             h = style['skin'].get_height()
-            widths = list(style['widths-normal']) + list(style['widths-over']) + list(style['widths-down']) + list(style['widths-disabled']) + list(style['widths-focused'])
-            
-            self.images = {'left': style['skin'].subsurface(Rect(0,0,widths[0],h)),
-                           'middle': style['skin'].subsurface(Rect(widths[0],0,widths[1],h)),
-                           'right': style['skin'].subsurface(Rect(sum(widths[:2]),0,widths[2],h)),
-                           
-                           'left-over': style['skin'].subsurface(Rect(sum(widths[:3]),0,widths[3],h)),
-                           'middle-over': style['skin'].subsurface(Rect(sum(widths[:4]),0,widths[4],h)),
-                           'right-over': style['skin'].subsurface(Rect(sum(widths[:5]),0,widths[5],h)),
-                           
-                           'left-down':style['skin'].subsurface(Rect(sum(widths[:6]),0,widths[6],h)),
-                           'middle-down': style['skin'].subsurface(Rect(sum(widths[:7]),0,widths[7],h)),
-                           'right-down': style['skin'].subsurface(Rect(sum(widths[:8]),0,widths[8],h)),
-                           
-                           'left-disabled': style['skin'].subsurface(Rect(sum(widths[:9]),0,widths[9],h)),
-                           'middle-disabled': style['skin'].subsurface(Rect(sum(widths[:10]),0,widths[10],h)),
-                           'right-disabled': style['skin'].subsurface(Rect(sum(widths[:11]),0,widths[11],h)),
-                           
-                           'left-focused': style['skin'].subsurface(Rect(sum(widths[:12]),0,widths[12],h)),
-                           'middle-focused': style['skin'].subsurface(Rect(sum(widths[:13]),0,widths[13],h)),
-                           'right-focused': style['skin'].subsurface(Rect(sum(widths[:14]),0,widths[14],h))}
+            widths = list(style['widths-normal']) + list(style['widths-over']) + list(style['widths-down']) + list(
+                style['widths-disabled']) + list(style['widths-focused'])
+
+            self.images = {'left': style['skin'].subsurface(Rect(0, 0, widths[0], h)),
+                           'middle': style['skin'].subsurface(Rect(widths[0], 0, widths[1], h)),
+                           'right': style['skin'].subsurface(Rect(sum(widths[:2]), 0, widths[2], h)),
+
+                           'left-over': style['skin'].subsurface(Rect(sum(widths[:3]), 0, widths[3], h)),
+                           'middle-over': style['skin'].subsurface(Rect(sum(widths[:4]), 0, widths[4], h)),
+                           'right-over': style['skin'].subsurface(Rect(sum(widths[:5]), 0, widths[5], h)),
+
+                           'left-down': style['skin'].subsurface(Rect(sum(widths[:6]), 0, widths[6], h)),
+                           'middle-down': style['skin'].subsurface(Rect(sum(widths[:7]), 0, widths[7], h)),
+                           'right-down': style['skin'].subsurface(Rect(sum(widths[:8]), 0, widths[8], h)),
+
+                           'left-disabled': style['skin'].subsurface(Rect(sum(widths[:9]), 0, widths[9], h)),
+                           'middle-disabled': style['skin'].subsurface(Rect(sum(widths[:10]), 0, widths[10], h)),
+                           'right-disabled': style['skin'].subsurface(Rect(sum(widths[:11]), 0, widths[11], h)),
+
+                           'left-focused': style['skin'].subsurface(Rect(sum(widths[:12]), 0, widths[12], h)),
+                           'middle-focused': style['skin'].subsurface(Rect(sum(widths[:13]), 0, widths[13], h)),
+                           'right-focused': style['skin'].subsurface(Rect(sum(widths[:14]), 0, widths[14], h))}
         else:
             self.images = None
-        
+
     def refresh(self):
         if not self.enabled:
             suffix = '-disabled'
@@ -706,12 +696,12 @@ class Button(Widget):
         elif self.mouseover:
             suffix = "-over"
         else:
-            suffix = "" 
-        
+            suffix = ""
+
         self.suffix = suffix
-        
-        textsurf = self.style['font'].render(self.text, self.style['antialias'], self.style['font-color'+suffix])
-        
+
+        textsurf = self.style['font'].render(self.text, self.style['antialias'], self.style['font-color' + suffix])
+
         content_width = 0
         if self.image:
             content_width += self.image.get_width()
@@ -719,7 +709,7 @@ class Button(Widget):
             content_width += textsurf.get_width()
         if self.image and self.text:
             content_width += 2
-                    
+
         if self.autosize:
             if self.style['appearence'] == styles.VECTORIAL:
                 if self.image:
@@ -728,47 +718,56 @@ class Button(Widget):
                     img_height = 0
                 self.size = content_width + 14, max(textsurf.get_height(), img_height) + 4
             else:
+                self.size = 2 + self.images['left'].get_width() + self.images['right'].get_width() + content_width, \
+                            self.images['middle'].get_height()
 
-                    
-                self.size = 2 + self.images['left'].get_width() + self.images['right'].get_width() + content_width, self.images['middle'].get_height()
-                
-        #Then, it creates its brand new surface if size changed or it's the first time it refreshes.
+        # Then, it creates its brand new surface if size changed or it's the first time it refreshes.
         if not self.surf or self.surf.get_size() != self.size:
             self.surf = Surface(self.size, pygame.SRCALPHA)
-                
+
         if self.style['appearence'] == styles.VECTORIAL:
             self.surf.fill(self.style['bg-color' + suffix])
-            draw.rect(self.surf, self.style['border-color'+self.suffix], Rect((0,0), self.size), self.style['border-width'])
+            draw.rect(self.surf, self.style['border-color' + self.suffix], Rect((0, 0), self.size),
+                      self.style['border-width'])
         else:
-            #Clears the surface
-            self.surf.fill((0,0,0,0))
-            utils.drawHWidget((0,0), self.width, self.images['left' + suffix], self.images['middle' + suffix], self.images['right' + suffix], self.surf)
-        
+            # Clears the surface
+            self.surf.fill((0, 0, 0, 0))
+            utils.drawHWidget((0, 0), self.width, self.images['left' + suffix], self.images['middle' + suffix],
+                              self.images['right' + suffix], self.surf)
+
         if self.image:
             if self.text:
-                point = utils.centerXY((0,0), self.size, (2 + self.image.get_width() + textsurf.get_width(), max(self.image.get_height() , textsurf.get_height())))
-                
+                point = utils.centerXY((0, 0), self.size, (
+                2 + self.image.get_width() + textsurf.get_width(), max(self.image.get_height(), textsurf.get_height())))
+
                 self.surf.blit(self.image, point)
-                self.surf.blit(textsurf, (point[0] + self.image.get_width() + 2, self.height / 2 - textsurf.get_height()  / 2))
+                self.surf.blit(textsurf,
+                               (point[0] + self.image.get_width() + 2, self.height / 2 - textsurf.get_height() / 2))
             else:
-                self.surf.blit(self.image , utils.centerXY((0,0), self.size, self.image.get_size()))
+                self.surf.blit(self.image, utils.centerXY((0, 0), self.size, self.image.get_size()))
         else:
-            self.surf.blit(textsurf, utils.centerXY((0,0), self.size, textsurf.get_size()))
-            
+            self.surf.blit(textsurf, utils.centerXY((0, 0), self.size, textsurf.get_size()))
+
         if self.hasFocus:
             if self.style['appearence'] == styles.VECTORIAL:
-                offset = 3
-                draw.rect(self.surf, self.style['focus-color'], Rect(offset,offset,self.width-offset*2,self.height-offset*2), 1)
+                if self.style['border-width'] == self.style['border-width-focus']:
+                    offset = 3
+                    draw.rect(self.surf, self.style['focus-color'],
+                              Rect(offset, offset, self.width - offset * 2, self.height - offset * 2), 1)
+                else:
+                    draw.rect(self.surf, self.style['border-color-focus'], Rect((0, 0), self.size),
+                              self.style['border-width-focus'])
             else:
-                utils.drawHWidget((0,0), self.width, self.images['left-focused'], self.images['middle-focused'], self.images['right-focused'], self.surf)
-                
+                utils.drawHWidget((0, 0), self.width, self.images['left-focused'], self.images['middle-focused'],
+                                  self.images['right-focused'], self.surf)
+
     def draw(self, surf):
         surf.blit(self.surf, self._true_position)
 
 
 class ImageButton(Widget):      
     def __init__(self, parent = None, skin = None, position = 0, visible = True, enabled = True, anchor = ANCHOR_TOP | ANCHOR_LEFT):
-        Widget.__init__(self,parent,None,position,None,visible,enabled,anchor)
+        Widget.__init__(self,parent,None,None,position,None,visible,enabled,anchor)
         
         self.skin = skin
         
@@ -807,7 +806,7 @@ class Window(Container):
     
     GETS_FOCUS = False
     
-    def __init__(self, parent, style = None, position = None, size = (300,200), visible = True, enabled = True, title = "Window", closeable = True, shadeable = True, mode = MODE_NORMAL, resizable = False):
+    def __init__(self, parent, theme=None, style = None, position = None, size = (300,200), visible = True, enabled = True, title = "Window", closeable = True, shadeable = True, mode = MODE_NORMAL, resizable = False):
         self.title = title
         self.closeable = closeable
         self.shadeable = shadeable
@@ -841,7 +840,7 @@ class Window(Container):
                 position = utils.centerXY((0,0), parent.size, size)
             
         
-        Container.__init__(self, parent, style, position, size, visible, enabled, ANCHOR_TOP | ANCHOR_LEFT)
+        Container.__init__(self, parent, theme, style, position, size, visible, enabled, ANCHOR_TOP | ANCHOR_LEFT)
         
         self.moving = None
         self.resizing = None
@@ -1106,127 +1105,153 @@ class Window(Container):
         if self.shaded:
             self.shaded = False
             self.size = self._oldsize
+
+
 class TextBox(Widget):
-    
     GETS_FOCUS = True
-    
+
     REFRESH_ON_MOUSE_OVER = False
     REFRESH_ON_MOUSE_LEAVE = False
     REFRESH_ON_MOUSE_DOWN = False
-    
-    def __init__(self, parent = None, style = None, position = 0, size = (100,20), visible = True, enabled = True, anchor = ANCHOR_TOP | ANCHOR_LEFT, text = ""):
-        Widget.__init__(self,parent,style,position,size,visible,enabled, anchor)
-        
+
+    def __init__(self, parent=None, theme=None, style=None, position=0, size=(100, 20), visible=True, enabled=True,
+                 anchor=ANCHOR_TOP | ANCHOR_LEFT, text=""):
+
+        if theme:
+            style = theme["TextBox"]
+
+        Widget.__init__(self, parent, theme, style, position, size, visible, enabled, anchor)
+
         if not style:
             self.style = styles.defaultTextBoxStyle
-            
+
         self.text = text
         self.currpos = len(text)
         self._textStartX = 0
         self.surf = None
         self.textWidth = 0
-        
+
         pygame.key.set_repeat(250, 40)
-                              
+
         self.dynamicAttributes.extend(["text", "currpos"])
+
+        # Callbacks
         self.refresh()
-    
+
+        self.connect("onMouseDown", self._mouse_down)
+
     def _set_style(self, style):
         self._style = style
-        
+
         if style:
             if style['appearence'] == styles.GRAPHICAL:
                 subs = utils.splitSurface(style['skin'], *(style['widths-normal'] + style['widths-disabled']))
-                
-                self.images= {'left':   subs[0],
-                              'middle': subs[1],
-                              'right':  subs[2],
-                              'left-disabled':   subs[3],
-                              'middle-disabled': subs[4],
-                              'right-disabled':  subs[5]
-                              }
+
+                self.images = {'left': subs[0],
+                               'middle': subs[1],
+                               'right': subs[2],
+                               'left-disabled': subs[3],
+                               'middle-disabled': subs[4],
+                               'right-disabled': subs[5]
+                               }
             else:
                 self.images = None
-            
-    def refresh(self):           
-        #Save this information coz it's frequently used
-        #self.metrics = self.style['font'].metrics(self.text)
+
+    def _mouse_down(self, widget):
+        if self.hasFocus and self.enabled and self.text > "" and self.mousedown:
+            # Width of the text until the cursor
+            cursorWidth = self.mousepos[0] - self.position[0] - self.offset[0]
+            for i in range(len(self.text) + 1):
+                textWidth = self.style['font'].size(self.text[:i])[0]
+                if textWidth >= cursorWidth:
+                    self.currpos = i
+                    break
+
+    def refresh(self):
+        # Save this information coz it's frequently used
+        # self.metrics = self.style['font'].metrics(self.text)
         self.offset = self.style['offset']
-        
-        if self.size[1] < self.style['font'].get_ascent() + self.offset[1]* 2:
-            self.size = self.size[0], self.style['font'].get_ascent() + self.offset[1]* 2
-        
+
+        if self.size[1] < self.style['font'].get_ascent() + self.offset[1] * 2:
+            self.size = self.size[0], self.style['font'].get_ascent() + self.offset[1] * 2
+
         if not self.enabled:
             suffix = '-disabled'
         elif self.hasFocus:
             suffix = "-focus"
         else:
             suffix = ""
-        
-        #Creates the surface with the rendered text
+
+        # Creates the surface with the rendered text
         self.textsurf = self.style['font'].render(self.text, self.style['antialias'], self.style['font-color' + suffix])
-        
-        #Creates a new widget surface if None or different size from widget size
+
+        # Creates a new widget surface if None or different size from widget size
         if not self.surf or self.surf.get_size() != self.size:
             self.surf = pygame.Surface(self.size, pygame.SRCALPHA)
-        
+
         if self.style['appearence'] == styles.VECTORIAL:
-            
-            #Background
+
+            # Background
             self.surf.fill(self.style['bg-color' + suffix])
-                    
-            #Calculates the position of the text surface
-            textpos =  self.offset[0], self.size[1] / 2. - self.textsurf.get_height() / 2
-            
-            #Width of the text until the cursor
+
+            # Calculates the position of the text surface
+            textpos = self.offset[0], self.size[1] / 2. - self.textsurf.get_height() / 2
+
+            # Width of the text until the cursor
             cursorWidth = self.style['font'].size(self.text[:self.currpos])[0]
-            #X coordinate of the cursor 
+            # X coordinate of the cursor
             cursorx = cursorWidth + self.offset[0]
-            #Total width of the text
+            # Total width of the text
             self.textWidth = self.textsurf.get_width()
-            
-            if cursorWidth - self._textStartX < self.size[0] - self.offset[0] * 2 :
+
+            if cursorWidth - self._textStartX < self.size[0] - self.offset[0] * 2:
                 if cursorx - self._textStartX < 0:
                     self._textStartX = max(0, cursorx - (self.size[0] - self.offset[0] * 2))
             else:
                 self._textStartX = cursorWidth - (self.size[0] - self.offset[0] * 2)
 
             bgcolor = self.style['bg-color' + suffix]
-            color_dark = utils.change_color_brightness(bgcolor,-50)
-            color_light = utils.change_color_brightness(bgcolor,+30)
-            #color_corner = mixColors(color_dark, color_light)
-            
-            draw.line(self.surf,color_dark, (0,0), (self.size[0]-2,0)) #TOP
-            draw.line(self.surf,color_dark, (0,0), (0,self.size[1]-2)) #LEFT
-            draw.line(self.surf,color_light, (1,self.size[1]-1), (self.size[0],self.size[1]-1)) #LEFT
-            draw.line(self.surf,color_light, (self.size[0]-1,1), (self.size[0]-1,self.size[1]-1)) #LEFT
-            
-        #Blits the text surface in the appropriate position
-        self.surf.blit(self.textsurf, textpos, Rect(self._textStartX ,0, self.size[0] - self.offset[0] * 2, self.textsurf.get_height()))
-        
-        #Draws the cursor
+            color_dark = utils.change_color_brightness(bgcolor, -50)
+            color_light = utils.change_color_brightness(bgcolor, +30)
+            # color_corner = mixColors(color_dark, color_light)
+
+            if self.style['border-width'] == self.style['border-width-focus']:
+                draw.line(self.surf, color_dark, (0, 0), (self.size[0] - 2, 0))  # TOP
+                draw.line(self.surf, color_dark, (0, 0), (0, self.size[1] - 2))  # LEFT
+                draw.line(self.surf, color_light, (1, self.size[1] - 1), (self.size[0], self.size[1] - 1))  # LEFT
+                draw.line(self.surf, color_light, (self.size[0] - 1, 1), (self.size[0] - 1, self.size[1] - 1))  # LEFT
+            else:
+                rect = Rect((0, 0), self.size)
+                draw.rect(self.surf, self.style['border-color' + suffix], rect, self.style['border-width' + suffix])
+
+        # Blits the text surface in the appropriate position
+        self.surf.blit(self.textsurf, textpos,
+                       Rect(self._textStartX, 0, self.size[0] - self.offset[0] * 2, self.textsurf.get_height()))
+
+        # Draws the cursor
         cursorx -= self._textStartX
-        draw.line(self.surf, (255,255,255), (cursorx ,self.offset[1]),(cursorx , self.size[1] - self.offset[1])) 
-            
+        if self.hasFocus and self.enabled:
+            draw.line(self.surf, (255, 255, 255), (cursorx, self.offset[1]), (cursorx, self.size[1] - self.offset[1]))
+
     def update(self, topmost):
         Widget.update(self, topmost)
-        
-        #Letter entry
+
+        # Letter entry
         if self.currpos > len(self.text):
             self.currpos = len(self.text)
-            
-        if self.hasFocus and self.enabled:           
+
+        if self.hasFocus and self.enabled:
             for e in spg._events:
-                if e.type == pygame.KEYDOWN:  
+                if e.type == pygame.KEYDOWN:
                     if e.key == pygame.K_BACKSPACE:
                         if self.currpos == 0:
                             continue
-                        self.text = self.text[:self.currpos-1] + self.text[self.currpos:]
+                        self.text = self.text[:self.currpos - 1] + self.text[self.currpos:]
                         self.currpos -= 1
                         if self.currpos < 0:
                             self.currpos = 0
                     elif e.key == pygame.K_DELETE:
-                        self.text = self.text[:self.currpos] + self.text[self.currpos+1:]
+                        self.text = self.text[:self.currpos] + self.text[self.currpos + 1:]
                     elif e.key == pygame.K_LEFT:
                         self.currpos -= 1
                         if self.currpos < 0:
@@ -1242,95 +1267,329 @@ class TextBox(Widget):
                     elif e.key in (pygame.K_RSHIFT, pygame.K_LSHIFT, pygame.K_RETURN, pygame.K_TAB):
                         pass
                     else:
-                        self.text = self.text[:self.currpos] +  e.unicode + self.text[self.currpos:]
-                        self.currpos += 1                   
+                        self.text = self.text[:self.currpos] + e.unicode + self.text[self.currpos:]
+                        self.currpos += 1
+
+    def draw(self, surf):
+        surf.blit(self.surf, self._true_position)
+
+class ScrollBox(Widget):
+    GETS_FOCUS = True
+
+    REFRESH_ON_MOUSE_OVER = False
+    REFRESH_ON_MOUSE_LEAVE = False
+    REFRESH_ON_MOUSE_DOWN = False
+
+    def __init__(self, parent=None, theme=None, style=None, position=0, size=(100, 20), visible=True, enabled=True,
+                 anchor=ANCHOR_TOP | ANCHOR_LEFT, value=0, min=0, max=100, delta=1):
+
+        if theme:
+            style = theme["ScrollBox"]
+
+        Widget.__init__(self, parent, theme, style, position, size, visible, enabled, anchor)
+
+        if not style:
+            self.style = styles.defaultTextBoxStyle
+
+        self.value = value
+        self.text = f"{value}"
+        self.currpos = len(self.text)
+        self.min = min
+        self.max = max
+        self.delta = delta
+        self._textStartX = 0
+        self.surf = None
+        self.textWidth = 0
+
+        pygame.key.set_repeat(250, 40)
+
+        self.dynamicAttributes.extend(["text", "value", "min", "max", "currpos"])
+
+        # Callbacks
+        self.refresh()
+
+        self.connect("onMouseDown", self._mouse_down)
+        self.connect("onLostFocus", self._lost_focus)
+
+    def _set_style(self, style):
+        self._style = style
+
+        if style:
+            if style['appearence'] == styles.GRAPHICAL:
+                subs = utils.splitSurface(style['skin'], *(style['widths-normal'] + style['widths-disabled']))
+
+                self.images = {'left': subs[0],
+                               'middle': subs[1],
+                               'right': subs[2],
+                               'left-disabled': subs[3],
+                               'middle-disabled': subs[4],
+                               'right-disabled': subs[5]
+                               }
+            else:
+                self.images = None
+
+    def _mouse_down(self, widget):
+        if self.hasFocus and self.enabled and self.text > "" and self.mousedown:
+            # Width of the text until the cursor
+            cursorWidth = self.mousepos[0] - self.position[0] - self.offset[0]
+            for i in range(len(self.text) + 1):
+                textWidth = self.style['font'].size(self.text[:i])[0]
+                if textWidth >= cursorWidth:
+                    self.currpos = i
+                    break
+
+    def _lost_focus(self, widget):
+        self.onValueChanged()
+
+    def onValueChanged(self):
+        self.text = f"{self.value}"
+        self.currpos = len(self.text)
+
+    def refresh(self):
+        # Save this information coz it's frequently used
+        # self.metrics = self.style['font'].metrics(self.text)
+        self.offset = self.style['offset']
+
+        if self.size[1] < self.style['font'].get_ascent() + self.offset[1] * 2:
+            self.size = self.size[0], self.style['font'].get_ascent() + self.offset[1] * 2
+
+        if not self.enabled:
+            suffix = '-disabled'
+        elif self.hasFocus:
+            suffix = "-focus"
+        else:
+            suffix = ""
+
+        # Creates the surface with the rendered text
+        self.textsurf = self.style['font'].render(self.text, self.style['antialias'], self.style['font-color' + suffix])
+
+        # Creates a new widget surface if None or different size from widget size
+        if not self.surf or self.surf.get_size() != self.size:
+            self.surf = pygame.Surface(self.size, pygame.SRCALPHA)
+
+        if self.style['appearence'] == styles.VECTORIAL:
+
+            # Background
+            self.surf.fill(self.style['bg-color' + suffix])
+
+            # Calculates the position of the text surface
+            textpos = self.offset[0], self.size[1] / 2. - self.textsurf.get_height() / 2
+
+            # Width of the text until the cursor
+            cursorWidth = self.style['font'].size(self.text[:self.currpos])[0]
+            # X coordinate of the cursor
+            cursorx = cursorWidth + self.offset[0]
+            # Total width of the text
+            self.textWidth = self.textsurf.get_width()
+
+            if cursorWidth - self._textStartX < self.size[0] - self.offset[0] * 2:
+                if cursorx - self._textStartX < 0:
+                    self._textStartX = max(0, cursorx - (self.size[0] - self.offset[0] * 2))
+            else:
+                self._textStartX = cursorWidth - (self.size[0] - self.offset[0] * 2)
+
+            bgcolor = self.style['bg-color' + suffix]
+            color_dark = utils.change_color_brightness(bgcolor, -50)
+            color_light = utils.change_color_brightness(bgcolor, +30)
+            # color_corner = mixColors(color_dark, color_light)
+
+            if self.style['border-width'] == self.style['border-width-focus']:
+                draw.line(self.surf, color_dark, (0, 0), (self.size[0] - 2, 0))  # TOP
+                draw.line(self.surf, color_dark, (0, 0), (0, self.size[1] - 2))  # LEFT
+                draw.line(self.surf, color_light, (1, self.size[1] - 1), (self.size[0], self.size[1] - 1))  # LEFT
+                draw.line(self.surf, color_light, (self.size[0] - 1, 1), (self.size[0] - 1, self.size[1] - 1))  # LEFT
+            else:
+                rect = Rect((0, 0), self.size)
+                draw.rect(self.surf, self.style['border-color' + suffix], rect, self.style['border-width' + suffix])
+
+        # Blits the text surface in the appropriate position
+        self.surf.blit(self.textsurf, textpos,
+                       Rect(self._textStartX, 0, self.size[0] - self.offset[0] * 2, self.textsurf.get_height()))
+
+        # Draws the cursor
+        cursorx -= self._textStartX
+        if self.hasFocus and self.enabled:
+            draw.line(self.surf, (255, 255, 255), (cursorx, self.offset[1]), (cursorx, self.size[1] - self.offset[1]))
+
+    def update(self, topmost):
+        Widget.update(self, topmost)
+
+        # Letter entry
+        if self.currpos > len(self.text):
+            self.currpos = len(self.text)
+
+        if self.hasFocus and self.enabled:
+            for e in spg._events:
+                if e.type == pygame.KEYDOWN:
+                    if e.key == pygame.K_BACKSPACE:
+                        if self.currpos == 0:
+                            continue
+                        self.text = self.text[:self.currpos - 1] + self.text[self.currpos:]
+                        self.currpos -= 1
+                        if self.currpos < 0:
+                            self.currpos = 0
+                    elif e.key == pygame.K_DELETE:
+                        self.text = self.text[:self.currpos] + self.text[self.currpos + 1:]
+                    elif e.key == pygame.K_LEFT:
+                        self.currpos -= 1
+                        if self.currpos < 0:
+                            self.currpos = 0
+                    elif e.key == pygame.K_RIGHT:
+                        self.currpos += 1
+                        if self.currpos > len(self.text):
+                            self.currpos = len(self.text)
+                    elif e.key == pygame.K_HOME:
+                        self.currpos = 0
+                    elif e.key == pygame.K_END:
+                        self.currpos = len(self.text)
+                    elif e.key == pygame.K_UP:
+                        if self.value + self.delta <= self.max:
+                            self.value = self.value + self.delta
+                            self.text = f"{self.value}"
+                            self.currpos = len(self.text)
+                    elif e.key == pygame.K_DOWN:
+                        if self.value - self.delta >= self.min:
+                            self.value = self.value - self.delta
+                            self.text = f"{self.value}"
+                            self.currpos = len(self.text)
+                    elif e.key == 13 or e.scancode == 88:
+                        try:
+                            self.value = int(self.text)
+                        except ValueError:
+                            self.onValueChanged()
+
+                        if self.value > self.max:
+                            self.value = self.max
+                            self.onValueChanged()
+                        elif self.value < self.min:
+                            self.value = self.min
+                            self.onValueChanged()
+                        else:
+                            self.onValueChanged()
+                    elif e.key in (pygame.K_RSHIFT, pygame.K_LSHIFT, pygame.K_RETURN, pygame.K_TAB):
+                        pass
+                    else:
+                        if e.unicode in "-0123456789":
+                            if self.text == "0":
+                                self.text = e.unicode
+                            else:
+                                self.text = self.text[:self.currpos] + e.unicode + self.text[self.currpos:]
+                            self.currpos = len(self.text)
 
     def draw(self, surf):
         surf.blit(self.surf, self._true_position)
 
 class CheckBox(Widget):
-        def __init__(self, parent, style = None, position = 10, size = (100,20), visible = True, enabled = True, anchor = ANCHOR_TOP | ANCHOR_LEFT, autosize = True, text = "Checkbox", value = True):
-            Widget.__init__(self,parent,style,position,size,visible,enabled,anchor)
-            
-            if not style:
-                self.style = styles.defaultCheckBoxStyle
-            
-            self.autosize = autosize
-            self.text = text
-            self.value = value 
-            self.textsurf = None
-            self.surf = None
-                
-            self.dynamicAttributes.extend(["text","value", "autosize"])
-            
-            #Callbacks
-            self.onValueChanged =  []
-            self.refresh()
-            
-            self.connect("onClick", self._mouse_click)
-            
-        def _mouse_click(self, widget):
-            self.value = not self.value            
-            self._runCallbacks(self.onValueChanged)
-            
-        def refresh(self):
-            if self.enabled:
-                suffix = ""
-            else:
-                suffix = "-disabled"
-            
-            self.textsurf = utils.renderText(self.text, self.style['font'], self.style['antialias'], self.style['font-color'+suffix],
-                   self.size, self.autosize, self.style['wordwrap'])
-            
-            if not self.enabled:
-                suffix = '-disabled'
-            elif self.mousedown:
-                suffix = "-down"
-            elif self.mouseover:
-                suffix = "-over"
-            else:
-                suffix = ""
-                
-            if self.value:
-                prefix = "checked"
-            else:
-                prefix = "unchecked"
-                
-            if self.autosize:
-                if self.style['appearence'] == styles.VECTORIAL:
-                    self.size = self.style['box-width'] + self.style['spacing'] + self.textsurf.get_width(), max(self.textsurf.get_height(), self.style['box-width'])
-                else:
-                    self.size = (self.textsurf.get_width() + self.style['spacing'] + self.style['checked-normal'].get_width(), max (self.textsurf.get_height(), self.style['checked-normal'].get_height()))
-          
-            if not self.surf or self.size != self.surf.get_size():
-                self.surf = Surface(self.size, pygame.SRCALPHA)
-            else:
-                self.surf.fill((0,0,0,0))
-                
-            if self.style['appearence'] == styles.VECTORIAL:
-                text_location = self.style['box-width'] + self.style['spacing'] , self.height / 2 - self.textsurf.get_height() / 2
-                
-                rect = Rect(0, 0, self.style['box-width'], self.style['box-width'])
-                
-                #Background
-                draw.rect(self.surf, self.style['box-color' + suffix], rect)
-                #Cross
-                if self.value:
-                    draw.rect(self.surf, self.style['check-color'+suffix], rect.inflate(-self.style['box-width']/2, -self.style['box-width']/2))
-                    
-                draw.rect(self.surf, self.style['border-color'+suffix], rect, 1)
-                
-                self.surf.blit(self.textsurf, text_location)
-            else:
-                centerPoint = self.style['spacing']  + self._true_x + self.style['checked-normal'].get_width(), center(self.position, self.size, self.textsurf.get_size())[1]
-                
-                image = self.style[prefix + suffix]
-                imagePoint = self.position[0], center(self.position,self.size, image.get_size())[1]
-                
-                #Draws the image
-                surf.blit(image, imagePoint)
-                surf.blit(self.textsurf, centerPoint, Rect((0,0), self.size))
+    def __init__(self, parent, theme=None, style=None, position=10, size=(100, 20), visible=True, enabled=True,
+                 anchor=ANCHOR_TOP | ANCHOR_LEFT, autosize=True, text="Checkbox", value=True):
 
-        def draw(self, surf):
-            surf.blit(self.surf, self._true_position)
+        if theme:
+            style = theme["CheckBox"]
+
+        Widget.__init__(self, parent, theme, style, position, size, visible, enabled, anchor)
+
+        if not style:
+            self.style = styles.defaultCheckBoxStyle
+
+        self.autosize = autosize
+        self.text = text
+        self.value = value
+        self.textsurf = None
+        self.surf = None
+
+        self.dynamicAttributes.extend(["text", "value", "autosize"])
+
+        # Callbacks
+        self.onValueChanged = []
+        self.refresh()
+
+        self.connect("onClick", self._mouse_click)
+
+    def _set_style(self, style):
+        self._style = style
+
+        if style and style['appearence'] == styles.GRAPHICAL:
+            h = style['skin'].get_height()
+
+            self.style['checked-normal'] = style['skin'].subsurface(Rect(4 * h, 0, h, h))
+            self.style['checked'] = style['skin'].subsurface(Rect(4 * h, 0, h, h))
+            self.style['checked-over'] = style['skin'].subsurface(Rect(5 * h, 0, h, h))
+            self.style['checked-down'] = style['skin'].subsurface(Rect(6 * h, 0, h, h))
+            self.style['checked-disabled'] = style['skin'].subsurface(Rect(7 * h, 0, h, h))
+            self.style['unchecked'] = style['skin'].subsurface(Rect(0, 0, h, h))
+            self.style['unchecked-over'] = style['skin'].subsurface(Rect(1 * h, 0, h, h))
+            self.style['unchecked-down'] = style['skin'].subsurface(Rect(2 * h, 0, h, h))
+            self.style['unchecked-disabled'] = style['skin'].subsurface(Rect(3 * h, 0, h, h))
+
+    def _mouse_click(self, widget):
+        self.value = not self.value
+        self._runCallbacks(self.onValueChanged)
+
+    def refresh(self):
+        if self.enabled:
+            suffix = ""
+        else:
+            suffix = "-disabled"
+
+        self.textsurf = utils.renderText(self.text, self.style['font'], self.style['antialias'],
+                                         self.style['font-color' + suffix],
+                                         self.size, self.autosize, self.style['wordwrap'])
+
+        if not self.enabled:
+            suffix = '-disabled'
+        elif self.mousedown:
+            suffix = "-down"
+        elif self.mouseover:
+            suffix = "-over"
+        else:
+            suffix = ""
+
+        if self.value:
+            prefix = "checked"
+        else:
+            prefix = "unchecked"
+
+        if self.autosize:
+            if self.style['appearence'] == styles.VECTORIAL:
+                self.size = self.style['box-width'] + self.style['spacing'] + self.textsurf.get_width(), max(
+                    self.textsurf.get_height(), self.style['box-width'])
+            else:
+                self.size = (
+                self.textsurf.get_width() + self.style['spacing'] + self.style['checked-normal'].get_width(),
+                max(self.textsurf.get_height(), self.style['checked-normal'].get_height()))
+
+        if not self.surf or self.size != self.surf.get_size():
+            self.surf = Surface(self.size, pygame.SRCALPHA)
+        else:
+            self.surf.fill((0, 0, 0, 0))
+
+        if self.style['appearence'] == styles.VECTORIAL:
+            text_location = self.style['box-width'] + self.style[
+                'spacing'], self.height / 2 - self.textsurf.get_height() / 2
+
+            rect = Rect(0, 0, self.style['box-width'], self.style['box-width'])
+
+            # Background
+            draw.rect(self.surf, self.style['box-color' + suffix], rect)
+            # Cross
+            if self.value:
+                draw.rect(self.surf, self.style['check-color' + suffix],
+                          rect.inflate(-self.style['box-width'] / 2, -self.style['box-width'] / 2))
+
+            draw.rect(self.surf, self.style['border-color' + suffix], rect, 1)
+
+            self.surf.blit(self.textsurf, text_location)
+        else:
+            centerPoint = self.style['spacing'] + self._true_x + self.style['checked-normal'].get_width(), \
+                          utils.centerXY((0, 0), self.size, self.textsurf.get_size())[1]
+
+            image = self.style[prefix + suffix]
+            imagePoint = self.position[0], utils.centerXY((0, 0), self.size, image.get_size())[1]
+
+            # Draws the image
+            self.surf.blit(image, imagePoint)
+            self.surf.blit(self.textsurf, centerPoint, Rect((0, 0), self.size))
+
+    def draw(self, surf):
+        surf.blit(self.surf, self._true_position)
 

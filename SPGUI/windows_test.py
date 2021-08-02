@@ -1,29 +1,4 @@
 
-"""
-Copyright (c) 2008 Canio Massimo "Keebus" Tristano
-
-Permission is hereby granted, free of charge, to any person
-obtaining a copy of this software and associated documentation
-files (the "Software"), to deal in the Software without
-restriction, including without limitation the rights to use,
-copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the
-Software is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
-"""
-
 import pygame
 
 pygame.init()
@@ -44,25 +19,6 @@ artpath = "art/"
 
 background = pygame.image.load(artpath + "back.jpg").convert()
 #COMMON STYLES
-graphicButtonStyle = {'font': spg.styles.defaultFont,
-                      'antialias': True,
-                      'autosize': True,
-                      
-                      'appearence': spg.styles.GRAPHICAL,
-                      
-                      'font-color':(0,0,0),
-                      'font-color-over': (0,0,0),
-                      'font-color-down': (0,0,0),
-                      
-                      'font-color-disabled': (0,0,0), 
-                      
-                      'skin': pygame.image.load(artpath + "button.png").convert_alpha(),
-                      'widths-normal': (4,1,4),
-                      'widths-over': (4,1,4),
-                      'widths-down': (4,1,4),
-                      'widths-disabled': (4,1,4),
-                      'widths-focused': (6,2,6)
-                      }
 
 # graphicButtonStyle = spg.styles.defaultButtonStyle
 
@@ -103,15 +59,21 @@ winStyle = {'font': spg.styles.titleFont,
 
 # winStyle = spg.styles.defaultWindowStyle
 
+checkBoxStyle = spg.styles.darkCheckBoxStyle
+
+darkTheme = spg.styles.darkTheme
+winTheme = spg.styles.winTheme
+mainTheme = darkTheme
+
 def show_dialog(widget):
     win = Window(parent = desktop, size = (300,140),mode = MODE_DIALOG, style = winStyle, title = "Dialog Window :P", shadeable = False, closeable = False)
     
     Label(parent = win, anchor = ANCHOR_TOP | ANCHOR_LEFT | ANCHOR_RIGHT, autosize = AUTOSIZE_VERTICAL_ONLY, text = "This is a Dialog Window. While there's one or more pending dialog windows, only the last one gets the input while the others are frozen until the last Dialog Window is closed.")
     
-    Button(parent = win, position = (0,0), text = "OK", anchor =  ANCHOR_BOTTOM | ANCHOR_RIGHT,  style = graphicButtonStyle, image = ok_icon).connect('onClick', lambda widget: win.destroy())
-    Button(parent = win, position = (60,0), text = "Open Another One!", style = graphicButtonStyle, anchor =  ANCHOR_BOTTOM | ANCHOR_RIGHT).connect('onClick', show_dialog)
+    Button(parent = win, position = (0,0), text = "OK", anchor =  ANCHOR_BOTTOM | ANCHOR_RIGHT,  theme=winTheme, image = ok_icon).connect('onClick', lambda widget: win.destroy())
+    Button(parent = win, position = (60,0), text = "Open Another One!", theme=winTheme, anchor =  ANCHOR_BOTTOM | ANCHOR_RIGHT).connect('onClick', show_dialog)
 
-win1 = Window(position = (100,100), title = "Window Always On Back", size = (320,120), parent = desktop, style = winStyle, mode = MODE_ALWAYS_BACK, closeable = False)
+win1 = Window(position = (100,120), title = "Window Always On Back", size = (320,120), parent = desktop, style = winStyle, mode = MODE_ALWAYS_BACK, closeable = False)
 win1.shade()
 
 Label(text = "This window will always be behind all the others. And this is very easy to do, just set the mode window property to MODE_ALWAYS_BACK while creating it.",
@@ -121,14 +83,18 @@ win2 =  Window( title = "Graphic Window", size = (440,300), parent = desktop, st
 win2.min_size = (360,210)
 
 
-Button(parent = win2, text = "OK", anchor =  ANCHOR_BOTTOM | ANCHOR_RIGHT,  style = graphicButtonStyle, image = ok_icon)
-Button(parent = win2, text = "Cancel", position = (50,0), anchor =  ANCHOR_BOTTOM | ANCHOR_RIGHT,  style = graphicButtonStyle,  image = cancel_icon)
-Button(parent = win2, position = 10, anchor = ANCHOR_BOTTOM| ANCHOR_LEFT | ANCHOR_RIGHT, style = graphicButtonStyle, text = "Open a Dialog Window", autosize =  0).connect('onClick', show_dialog)
+Button(parent = win2, text = "OK", anchor =  ANCHOR_BOTTOM | ANCHOR_RIGHT,  theme=winTheme, image = ok_icon)
+Button(parent = win2, text = "Cancel", position = (50,0), anchor =  ANCHOR_BOTTOM | ANCHOR_RIGHT,  theme=winTheme,  image = cancel_icon)
+Button(parent = win2, position = 10, anchor = ANCHOR_BOTTOM| ANCHOR_LEFT | ANCHOR_RIGHT, theme=winTheme, text = "Open a Dialog Window", autosize =  0).connect('onClick', show_dialog)
 
 Label(position = (0,0), text = "Welcome to Simple-Pygame-GUI 2! This is a very first version of the definitive game-focused GUI system for pygame. This is a basic demonstration of the new Window widget with its new features such as skinning, resizing, front windows, back windows, dialog windows, and so on. Hope you'll enjoy and please stay tuned for further updates and demos on http://www.keebus.net.",
       parent = win2, anchor = ANCHOR_TOP | ANCHOR_LEFT | ANCHOR_RIGHT, autosize  = AUTOSIZE_VERTICAL_ONLY)
 
-CheckBox(text = "Check me! ;)", parent = desktop, position = (5,5))
+CheckBox(text = "Check me! ;)", parent = desktop, position = (5, 5), theme=mainTheme, value=True, enabled=True)
+Label(parent=desktop, position=(5, 25), text = "text label", theme=mainTheme, autosize=True)
+TextBox(parent=desktop, position=(5, 45), size=(300, 20), anchor=ANCHOR_TOP | ANCHOR_LEFT,theme=mainTheme, text="text tststt sdjfldfkj aldkf jalajdflka jdsflkaj sdlfkja")
+Button(parent=desktop, size=(100, 20), text="Cancel", position=(5, 70), theme=mainTheme)
+ScrollBox(parent=desktop, position=(5, 95), size=(300, 20), anchor=ANCHOR_TOP | ANCHOR_LEFT,theme=mainTheme, value=0)
 
 # *** END TESTING AREA ***
 
@@ -144,9 +110,9 @@ while running:
         if e.type == pygame.VIDEORESIZE:
             screen = pygame.display.set_mode(e.size, pygame.RESIZABLE)
         
-    screen.fill((250,250,255))
+    screen.fill(spg.styles.darkTheme['BGColor'])
     
-    screen.blit(background, (0,0))
+    # screen.blit(background, (0,0))
     
     desktop.update()
     
