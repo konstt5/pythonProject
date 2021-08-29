@@ -9,7 +9,7 @@ clock = pygame.time.Clock()
 fps = 60
 
 def loadImage(name):
-    fullname = name
+    fullname = "Data/" + name
     try:
         if name[-2:] == "jpg":
             image = pygame.image.load(fullname).convert()
